@@ -176,7 +176,7 @@
         <div class="col-12">
           <p class="text-lg-start mb-0 text-center">
             © <span class="current-year"></span>
-            <a class="text-primary fw-normal" href="https://themesberg.com" target="_blank">Sanca Developer</a>
+            <a class="text-primary fw-normal" href="#">Sheila Febri</a>
           </p>
         </div>
 

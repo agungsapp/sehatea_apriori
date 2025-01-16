@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
         // pondasi
         $this->call(ProdukSeeder::class);
         $this->call(StarterSeeder::class);
-        // $this->call(BahanSeeder::class);
+        $this->call(BahanSeeder::class);
         $this->call(UserSeeder::class);
         $this->call(SettingsSeeder::class);
         $this->call(SumberDanaSeeder::class);

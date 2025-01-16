@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('nama');
             $table->string('satuan');
-            $table->integer('stok');
+            $table->integer('stok')->default(0);
             $table->text('catatan')->nullable();
             $table->boolean('active')->default(true);
             $table->timestamps();

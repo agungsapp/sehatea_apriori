@@ -4,6 +4,7 @@ namespace App\Livewire\Dashboard;
 
 use App\Models\BarangMasuk;
 use App\Models\Pengeluaran;
+use App\Models\PengeluaranLain;
 use App\Models\Penjualan;
 use App\Models\Stok;
 use App\Models\Supplier;
@@ -20,7 +21,7 @@ class DashboardPage extends Component
     public $omset;
 
     public $startDate, $endDate;
-    public $totalTransaksi, $labaKotor, $labaBersih, $pengeluaran;
+    public $totalTransaksi, $labaKotor, $labaBersih, $pengeluaran, $pengeluaranLain;
 
     public function mount()
     {
@@ -34,7 +35,7 @@ class DashboardPage extends Component
 
     public function loadData()
     {
-        // $this->loadStats();
+        $this->loadStats();
     }
 
     private function loadStats()
@@ -56,8 +57,14 @@ class DashboardPage extends Component
 
         // Pengeluaran query
         $pengeluaranQuery = Pengeluaran::query();
-
         // Apply date filter only if both dates are set
+        if ($this->startDate && $this->endDate) {
+            $pengeluaranQuery->whereBetween('tanggal', [
+                Carbon::parse($this->startDate)->startOfDay(),
+                Carbon::parse($this->endDate)->endOfDay()
+            ]);
+        }
+        $pengeluaranLainQuery = PengeluaranLain::query();
         if ($this->startDate && $this->endDate) {
             $pengeluaranQuery->whereBetween('tanggal', [
                 Carbon::parse($this->startDate)->startOfDay(),
@@ -66,6 +73,7 @@ class DashboardPage extends Component
         }
 
         $this->pengeluaran = $pengeluaranQuery->sum('subtotal');
+        $this->pengeluaranLain =  $pengeluaranLainQuery->sum('harga');
     }
 
     public function resetFilter()

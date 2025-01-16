@@ -83,7 +83,7 @@ class PembelianBahanPage extends Component
     {
         $this->pengeluaranId = $id;
         $data = Pengeluaran::findOrFail($id);
-        $this->showCon("Apakah anda yakin ingin menghapus {$this->context} <strong>$data->bahan->nama</strong> ?", 'deleteItemConfirmed');
+        $this->showCon("Apakah anda yakin ingin menghapus {$this->context} <strong>{$data->bahan->nama}</strong> ?", 'deleteItemConfirmed');
     }
 
     #[On('deleteItemConfirmed')]
@@ -94,7 +94,10 @@ class PembelianBahanPage extends Component
             $pengeluaran = Pengeluaran::findOrFail($this->pengeluaranId);
 
             // Kurangi stok sebelum menghapus
-            $this->kurangiStok($pengeluaran->bahan_id, $pengeluaran->qty, $pengeluaran->satuan);
+            if (!$this->kurangiStok($pengeluaran->bahan_id, $pengeluaran->qty, $pengeluaran->satuan)) {
+                DB::rollBack();
+                return;
+            }
 
             $pengeluaran->delete();
 
@@ -179,6 +182,7 @@ class PembelianBahanPage extends Component
                 ]);
             } else {
                 // Create
+
                 Pengeluaran::create([
                     'bahan_id' => $this->selectedBahan,
                     'satuan' => $this->selectedSatuan,
@@ -190,7 +194,27 @@ class PembelianBahanPage extends Component
                     'tanggal' => $this->tanggal,
                     'catatan' => $this->catatan,
                 ]);
-                $this->tambahStok($this->selectedBahan, $this->qty, $this->selectedSatuan);
+                // Coba tambah stok dulu
+                if (!$this->tambahStok($this->selectedBahan, $this->qty, $this->selectedSatuan)) {
+                    DB::rollBack();
+                    return; // Keluar dari fungsi jika tambah stok gagal
+                }
+
+                // $bahan = Bahan::find($this->selectedBahan);
+
+                // if ($this->selectedSatuan !== $bahan->satuan) {
+                //     try {
+                //         $konversi = KonversiSatuan::where('bahan_id', $this->selectedBahan)
+                //             ->where('satuan_awal', $this->selectedSatuan)->first();
+
+                //         $realStok = $this->qty * $konversi->rasio;
+
+                //         dd("ketemu bre", $konversi);
+                //     } catch (\Throwable $th) {
+                //         throw $th;
+                //     }
+                // }
+
             }
 
             DB::commit();
@@ -210,22 +234,32 @@ class PembelianBahanPage extends Component
 
             if ($bahan->satuan == $satuan) {
                 $bahan->stok += $qty;
-            } else {
-                $konversi = KonversiSatuan::where('bahan_id', $bahanId)
-                    ->where('satuan_awal', $satuan)
-                    ->where('satuan_tujuan', $bahan->satuan)
-                    ->firstOrFail();
-
-                $hasil = $qty * $konversi->rasio;
-                $bahan->stok += $hasil;
+                $bahan->save();
+                return true;
             }
 
+            // Cek konversi satuan
+            $konversi = KonversiSatuan::where('bahan_id', $bahanId)
+                ->where('satuan_awal', $satuan)
+                ->where('satuan_tujuan', $bahan->satuan)
+                ->first();
+
+            // Jika konversi tidak ditemukan, tampilkan error dan return false
+            if (!$konversi) {
+                $this->showError("Data konversi satuan untuk bahan {$bahan->nama} dari {$satuan} ke {$bahan->satuan} tidak ditemukan!");
+                return false;
+            }
+
+            // Jika konversi ditemukan, lakukan perhitungan
+            $hasil = $qty * $konversi->rasio;
+            $bahan->stok += $hasil;
             $bahan->save();
+
             return true;
         } catch (\Exception $e) {
-            // Log::error('Error saat update stok: ' . $e->getMessage());
-            // throw new \Exception('Gagal update stok: ' . $e->getMessage());
+            DB::rollBack();
             $this->showError('Error saat update stok: ' . $e->getMessage());
+            return false;
         }
     }
 
@@ -239,24 +273,30 @@ class PembelianBahanPage extends Component
                 $konversi = KonversiSatuan::where('bahan_id', $bahanId)
                     ->where('satuan_awal', $satuan)
                     ->where('satuan_tujuan', $bahan->satuan)
-                    ->firstOrFail();
+                    ->first();
+
+                // Jika konversi tidak ditemukan
+                if (!$konversi) {
+                    $this->showError("Data konversi satuan untuk bahan {$bahan->nama} dari {$satuan} ke {$bahan->satuan} tidak ditemukan!");
+                    return false;
+                }
 
                 $qtyDalamSatuanBahan = $qty * $konversi->rasio;
             }
 
             // Cek apakah stok mencukupi
             if ($bahan->stok < $qtyDalamSatuanBahan) {
-                // throw new \Exception();
-                $this->showError("Stok {$bahan->nama} tidak mencukupi untuk operasi ini");
+                $this->showError("Stok {$bahan->nama} tidak mencukupi untuk operasi ini. Stok tersedia: {$bahan->stok} {$bahan->satuan}");
+                return false;
             }
 
             $bahan->stok -= $qtyDalamSatuanBahan;
             $bahan->save();
             return true;
         } catch (\Exception $e) {
-            // Log::error('Error saat kurangi stok: ' . $e->getMessage());
-            // throw new \Exception('Gagal kurangi stok: ' . $e->getMessage());
+            DB::rollBack();
             $this->showError('Error saat kurangi stok: ' . $e->getMessage());
+            return false;
         }
     }
 

@@ -10,7 +10,17 @@ class PengeluaranLain extends Model
     use HasFactory;
 
     protected $table = 'pengeluaran_lains';
-    protected $guarded = ['id'];
+
+    protected $fillable = [
+        'nama',
+        'jenis_pengeluaran_id',
+        'sumber_dana_id',
+        'harga',
+        'keterangan',
+        'tanggal_pengeluaran',
+    ];
+
+    // protected $guarded = ['id'];
 
     public function jenisPengeluaran()
     {

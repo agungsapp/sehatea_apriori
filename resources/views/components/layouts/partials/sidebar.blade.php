@@ -98,12 +98,12 @@
                 ['route' => 'jenis-pengeluaran', 'text' => 'Jenis Pengeluaran'],
                 ['route' => 'sumber-dana', 'text' => 'Sumber Dana'],
 
-                ['route' => 'brand', 'text' => 'Brand'],
-                ['route' => 'cabang', 'text' => 'Cabang'],
-                ['route' => 'instansi', 'text' => 'Instansi'],
-                ['route' => 'jasa', 'text' => 'Jasa'],
-                ['route' => 'kategori', 'text' => 'Kategori'],
-                ['route' => 'supplier', 'text' => 'Supplier'],
+                // ['route' => 'brand', 'text' => 'Brand'],
+                // ['route' => 'cabang', 'text' => 'Cabang'],
+                // ['route' => 'instansi', 'text' => 'Instansi'],
+                // ['route' => 'jasa', 'text' => 'Jasa'],
+                // ['route' => 'kategori', 'text' => 'Kategori'],
+                // ['route' => 'supplier', 'text' => 'Supplier'],
             ];
           @endphp
 
@@ -128,6 +128,18 @@
             </svg>
           </span>
           <span class="sidebar-text">Data Produk</span>
+        </a>
+      </li>
+      <li class="nav-item {{ Route::is('komposisi') ? 'active' : '' }}">
+        <a href="{{ route('komposisi') }}" class="nav-link">
+          <span class="sidebar-icon">
+            <svg class="icon icon-xs me-2" fill="currentColor" viewBox="0 0 20 20"
+              xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
+              <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
+            </svg>
+          </span>
+          <span class="sidebar-text">Data Komposisi</span>
         </a>
       </li>
       <li class="nav-item {{ Route::is('bahan') ? 'active' : '' }}">
@@ -166,6 +178,18 @@
           <span class="sidebar-text">Pembelian Bahan</span>
         </a>
       </li>
+      <li class="nav-item {{ Route::is('pengeluaran-lain') ? 'active' : '' }}">
+        <a href="{{ route('pengeluaran-lain') }}" class="nav-link">
+          <span class="sidebar-icon">
+            <svg class="icon icon-xs me-2" fill="currentColor" viewBox="0 0 20 20"
+              xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
+              <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
+            </svg>
+          </span>
+          <span class="sidebar-text">Pengeluaran Lain</span>
+        </a>
+      </li>
       <li class="nav-item {{ Route::is('mode-kasir') ? 'active' : '' }}">
         <a href="{{ route('mode-kasir') }}" class="nav-link">
           <span class="sidebar-icon">
@@ -178,9 +202,6 @@
           <span class="sidebar-text">Mode Kasir</span>
         </a>
       </li>
-
-
-      @include('components.layouts.partials.drop.pelanggan')
 
 
 

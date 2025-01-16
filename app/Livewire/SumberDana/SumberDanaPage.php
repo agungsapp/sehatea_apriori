@@ -16,7 +16,8 @@ class SumberDanaPage extends Component
 
     use LivewireAlertHelpers;
 
-    public string $tableName = 'jenis-pengeluaran-table';
+    public string $tableName = 'sumber-dana-table';
+
 
     public string $context = 'sumber dana';
 

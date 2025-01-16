@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Livewire\SumberDana;
+namespace App\Livewire\PengeluaranLain;
 
-use App\Models\SumberDana;
+use App\Models\PengeluaranLain;
 use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use PowerComponents\LivewirePowerGrid\Button;
@@ -12,9 +12,9 @@ use PowerComponents\LivewirePowerGrid\Facades\PowerGrid;
 use PowerComponents\LivewirePowerGrid\PowerGridFields;
 use PowerComponents\LivewirePowerGrid\PowerGridComponent;
 
-final class SumberDanaTable extends PowerGridComponent
+final class PengeluaranLainTable extends PowerGridComponent
 {
-    public string $tableName = 'sumber-dana-table';
+    public string $tableName = 'pengeluaran-lain-table';
 
     public function setUp(): array
     {
@@ -31,7 +31,7 @@ final class SumberDanaTable extends PowerGridComponent
 
     public function datasource(): Builder
     {
-        return SumberDana::query();
+        return PengeluaranLain::query()->with(['jenisPengeluaran', 'sumberDana']);
     }
 
     public function relationSearch(): array
@@ -44,6 +44,11 @@ final class SumberDanaTable extends PowerGridComponent
         return PowerGrid::fields()
             ->add('id')
             ->add('nama')
+            ->add('jenis_pengeluaran', fn($data) => $data->jenisPengeluaran->nama)
+            ->add('sumber_dana', fn($data) => $data->sumberDana->nama)
+            ->add('harga')
+            ->add('keterangan', fn($data) => substr($data->keterangan, 0, 30) . (strlen($data->keterangan) > 30 ? '...' : ''))
+            ->add('tanggal_pengeluaran_formatted', fn(PengeluaranLain $model) => Carbon::parse($model->tanggal_pengeluaran)->format('d/m/Y H:i:s'))
             ->add('created_at_formatted', fn($data) => Carbon::parse($data->created_at)->format('d-m-Y'));
     }
 
@@ -55,6 +60,19 @@ final class SumberDanaTable extends PowerGridComponent
                 ->sortable()
                 ->searchable(),
 
+            Column::make('Jenis pengeluaran id', 'jenis_pengeluaran'),
+            Column::make('Sumber dana id', 'sumber_dana'),
+            Column::make('Harga', 'harga')
+                ->sortable()
+                ->searchable(),
+
+            Column::make('Keterangan', 'keterangan')
+                ->sortable()
+                ->searchable(),
+
+            Column::make('Tanggal pengeluaran', 'tanggal_pengeluaran_formatted', 'tanggal_pengeluaran')
+                ->sortable(),
+
             Column::make('Created at', 'created_at_formatted', 'created_at')
                 ->sortable(),
 
@@ -64,7 +82,9 @@ final class SumberDanaTable extends PowerGridComponent
 
     public function filters(): array
     {
-        return [];
+        return [
+            Filter::datetimepicker('tanggal_pengeluaran'),
+        ];
     }
 
     #[\Livewire\Attributes\On('edit')]
@@ -73,7 +93,7 @@ final class SumberDanaTable extends PowerGridComponent
         $this->js('alert(' . $rowId . ')');
     }
 
-    public function actions(SumberDana $row): array
+    public function actions(PengeluaranLain $row): array
     {
         return [
             Button::add('edit')
@@ -88,6 +108,7 @@ final class SumberDanaTable extends PowerGridComponent
                 ->dispatch('delete-item', ['id' => $row->id])
         ];
     }
+
 
     /*
     public function actionRules($row): array

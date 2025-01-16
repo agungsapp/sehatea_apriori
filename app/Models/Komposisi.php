@@ -8,8 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class Komposisi extends Model
 {
     use HasFactory;
-    protected $guarded = ['id'];
+    // protected $guarded = ['id'];
 
+    protected $fillable = [
+        'produk_id',
+        'bahan_id',
+        'takaran'
+    ];
 
     public function bahan()
     {
