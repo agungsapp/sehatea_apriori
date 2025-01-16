@@ -1,0 +1,8 @@
+migrasi ke sehatea sampai di tahap pembelian bahan sudah done CRUD. 
+- master data jenis pengeluaran 
+- master data sumber dana
+- penjualan beresin
+- pennjualan detail juga
+
+-bersih besih 
+- susun implementasi algoritma
