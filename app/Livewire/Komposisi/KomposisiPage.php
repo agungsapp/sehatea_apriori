@@ -8,6 +8,8 @@ use App\Models\Komposisi;
 use App\Models\KonversiSatuan;
 use App\Models\Pengeluaran;
 use App\Models\Produk;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 
 class KomposisiPage extends Component
@@ -80,55 +82,36 @@ class KomposisiPage extends Component
     public function calculateHppBahan($bahanId, $takaran)
     {
         $bahan = Bahan::find($bahanId);
-        $hargaSatuan = 0;
-        $satuanAwal = '';
 
-        // Tentukan sumber harga dan satuan
-        if ($this->manualInput) {
-            $hargaSatuan = $this->hargaSatuanManual;
-            $satuanAwal = $this->satuanAwalManual;
-        } else {
-            $lastPurchase = Pengeluaran::where('bahan_id', $bahanId)
-                ->orderBy('tanggal', 'desc')
-                ->first();
-
-            if (!$lastPurchase) {
-                $this->showError('Data pembelian tidak ditemukan');
-                return 0;
-            }
-
-            $hargaSatuan = $lastPurchase->harga_satuan;
-            $satuanAwal = $lastPurchase->satuan;
+        if (!$bahan) {
+            $this->alert('error', "Bahan tidak ditemukan");
+            return 0;
         }
 
-        // Jika satuan berbeda, lakukan konversi
-        if ($satuanAwal !== $bahan->satuan) {
-            $konversi = KonversiSatuan::where('bahan_id', $bahanId)
-                ->where('satuan_awal', $satuanAwal)
-                ->where('satuan_tujuan', $bahan->satuan)
-                ->first();
-
-            if (!$konversi) {
-                $this->showError("Tidak ditemukan data konversi untuk {$bahan->nama} dari satuan {$satuanAwal} ke {$bahan->satuan}");
-                return 0;
-            }
-
-            $hargaSatuan = $hargaSatuan / $konversi->rasio;
-        }
-
-        return $hargaSatuan * $takaran;
+        return $bahan->harga_satuan * $takaran;
     }
 
     public function addToKomposisi()
     {
-        $this->validate();
+        // $this->validate();
+        // dd("oke");
 
         $bahan = Bahan::find($this->selectedBahan);
         $hpp = $this->calculateHppBahan($this->selectedBahan, $this->takaran);
 
-        // Jika HPP 0 dan ada error, jangan lanjutkan
-        if ($hpp === 0 && session()->has('error')) {
-            return;
+        // Tambahkan debugging
+        if ($hpp === 0) {
+            Log::info('HPP adalah 0 untuk bahan:', [
+                'bahan_id' => $this->selectedBahan,
+                'takaran' => $this->takaran,
+                'manual_input' => $this->manualInput,
+                'harga_satuan_manual' => $this->hargaSatuanManual,
+                'satuan_awal_manual' => $this->satuanAwalManual
+            ]);
+
+            if (session()->has('error')) {
+                return;
+            }
         }
 
         $this->komposisi[] = [
@@ -155,6 +138,54 @@ class KomposisiPage extends Component
         $this->satuan = null;
     }
 
+    public function removeFromKomposisi($index)
+    {
+        // Hapus item dari array komposisi berdasarkan index
+        unset($this->komposisi[$index]);
+        // Re-index array
+        $this->komposisi = array_values($this->komposisi);
+        // Hitung ulang total HPP
+        $this->calculateTotalHpp();
+        $this->alert('success', 'Bahan berhasil dihapus');
+    }
+
+    public function calculateTotalHpp()
+    {
+        // Hitung total HPP dari semua bahan dalam komposisi
+        $this->totalHpp = array_sum(array_column($this->komposisi, 'hpp'));
+    }
+
+    public function editKomposisi($produkId)
+    {
+        $this->isEdit = true;
+        $this->selectedProduk = $produkId;
+
+        // Ambil data komposisi yang ada
+        $existingKomposisi = Komposisi::with('bahan')
+            ->where('produk_id', $produkId)
+            ->get();
+
+        // Reset komposisi array
+        $this->komposisi = [];
+
+        // Isi komposisi array dengan data yang ada
+        foreach ($existingKomposisi as $item) {
+            $hpp = $this->calculateHppBahan($item->bahan_id, $item->takaran);
+
+            $this->komposisi[] = [
+                'bahan_id' => $item->bahan_id,
+                'nama_bahan' => $item->bahan->nama,
+                'takaran' => $item->takaran,
+                'satuan' => $item->bahan->satuan,
+                'hpp' => $hpp,
+                'is_manual' => false // Sesuaikan dengan kebutuhan
+            ];
+        }
+
+        $this->calculateTotalHpp();
+    }
+
+    // Tambahkan method untuk update
     public function save()
     {
         if (empty($this->komposisi)) {
@@ -163,6 +194,46 @@ class KomposisiPage extends Component
         }
 
         try {
+            // Mulai transaksi
+            DB::beginTransaction();
+
+            foreach ($this->komposisi as $item) {
+                Komposisi::create([
+                    'produk_id' => $this->selectedProduk,
+                    'bahan_id' => $item['bahan_id'],
+                    'takaran' => $item['takaran'],
+                ]);
+            }
+
+            // Update HPP produk
+            $produk = Produk::find($this->selectedProduk);
+            $produk->hpp = $this->totalHpp;
+            $produk->save();
+
+            DB::commit();
+
+            $this->alert('success', 'Komposisi berhasil disimpan');
+            $this->resetAll();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->alert('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    public function update()
+    {
+        if (empty($this->komposisi)) {
+            $this->alert('error', 'Tambahkan bahan terlebih dahulu!');
+            return;
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Hapus komposisi lama
+            Komposisi::where('produk_id', $this->selectedProduk)->delete();
+
+            // Simpan komposisi baru
             foreach ($this->komposisi as $item) {
                 Komposisi::create([
                     'produk_id' => $this->selectedProduk,
@@ -171,16 +242,32 @@ class KomposisiPage extends Component
                 ]);
             }
 
-            $this->alert('success', 'Komposisi berhasil disimpan');
-            $this->komposisi = [];
-            $this->totalHpp = 0;
-            $this->selectedProduk = null;
-            $this->resetForm();
-            $this->mount(); // Refresh data
+            // Update HPP produk
+            $produk = Produk::find($this->selectedProduk);
+            $produk->hpp = $this->totalHpp;
+            $produk->save();
+
+            DB::commit();
+
+            $this->alert('success', 'Komposisi berhasil diperbarui');
+            $this->resetAll();
         } catch (\Exception $e) {
+            DB::rollBack();
             $this->alert('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
+
+    private function resetAll()
+    {
+        $this->isEdit = false;
+        $this->komposisi = [];
+        $this->totalHpp = 0;
+        $this->selectedProduk = null;
+        $this->resetForm();
+        $this->mount();
+    }
+
+
 
     public function render()
     {

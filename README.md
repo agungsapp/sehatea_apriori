@@ -1,65 +1,100 @@
-# Pos Bengkel M3
+# Sehatea POS
 
-Repository utama project aplikasi POS (Poin of sale) bengkel M3
+Sehatea POS adalah aplikasi Point of Sale yang dirancang untuk UMKM (Usaha Mikro, Kecil, dan Menengah) yang mengkhususkan diri dalam produk es teh. Aplikasi ini dibuat untuk mengelola transaksi penjualan secara efisien.
 
-## Petunjuk Update
+## Teknologi yang Digunakan
 
-## Petunjuk Update
+-   Laravel 11
+-   Livewire 3
+-   Node.js dan NPM
 
-Sebelum melakukan langkah di bawah pastikan xampp sudah di buka dan start apache dan mysql
+## Prasyarat
 
-1. Ambil perubahan terbaru
+Sebelum Anda memulai, pastikan Anda telah memenuhi persyaratan berikut:
 
-```bash
-  git pull origin main
-```
+-   PHP >= 8.1
+-   Composer
+-   Node.js dan NPM
+-   MySQL atau database yang kompatibel
 
-tunggu hingga selesai.
+## Instalasi
 
-2. install dependency
+Ikuti langkah-langkah berikut untuk menyiapkan lingkungan pengembangan Anda:
 
-```bash
-  composer install
-```
+1. Klon repositori
 
-tunggu hingga selesai
+    ```
+    git clone https://github.com/agungsapp/sehatea_apriori.git
+    ```
 
-3. Migrasi ulang database dengan data dummy
+2. Pindah ke direktori proyek
 
-```bash
-  php artisan migrate:fresh --seed
-```
+    ```
+    cd sehatea_apriori
+    ```
 
-## Menjalankan Project
+3. Instal dependensi PHP
 
-1. buka gitbash dan paste
+    ```
+    composer install
+    ```
 
-```bash
-  npm run dev
-```
+4. Instal dependensi JavaScript
 
-2. menjalankan php server
+    ```
+    npm install
+    ```
 
-```bash
-  php artisan serve
-```
+5. Salin file .env.example dan ubah namanya menjadi .env
 
-akses web melalui
+    ```
+    cp .env.example .env
+    ```
 
-```bash
-http://localhost:8000/
-```
+6. Konfigurasikan file .env Anda dengan kredensial database dan pengaturan lain yang diperlukan
 
-## Akses login
+7. Generate kunci aplikasi
 
-username :
+    ```
+    php artisan key:generate
+    ```
 
-```bash
-administrator@gmail.com
-```
+8. Jalankan migrasi database dan isi dengan data awal
+    ```
+    php artisan migrate --seed
+    ```
 
-password :
+## Menjalankan Aplikasi
 
-```bash
-admin123
-```
+Anda dapat menjalankan aplikasi dengan dua cara:
+
+### Mode Pengembangan
+
+1. Di satu terminal, jalankan server pengembangan Laravel:
+
+    ```
+    php artisan serve
+    ```
+
+2. Di terminal lain, kompilasi dan muat ulang aset secara otomatis:
+    ```
+    npm run dev
+    ```
+
+### Mode Produksi
+
+1. Build aset untuk produksi:
+
+    ```
+    npm run build
+    ```
+
+2. Jalankan server Laravel:
+    ```
+    php artisan serve
+    ```
+
+## Catatan Tambahan
+
+-   Aplikasi ini dirancang khusus untuk mengelola transaksi penjualan Sehatea, sebuah UMKM es teh.
+-   Untuk masalah atau saran, silakan buka issue di repositori GitHub.

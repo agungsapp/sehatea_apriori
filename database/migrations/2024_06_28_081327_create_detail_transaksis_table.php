@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('kode', 20);
             $table->integer('harga');
             $table->integer('qty');
+            $table->float('hpp')->default(0);
             $table->integer('subtotal');
             $table->timestamps();
 

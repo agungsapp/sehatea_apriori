@@ -11,14 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('bahans', function (Blueprint $table) {
+        Schema::create('analisis_aprioris', function (Blueprint $table) {
             $table->id();
-            $table->string('nama');
-            $table->string('satuan');
-            $table->float('harga_satuan')->default(0);
-            $table->integer('stok')->default(0);
-            $table->text('catatan')->nullable();
-            $table->boolean('active')->default(true);
+            $table->json('itemset');
+            $table->float('support');
+            $table->float('confidence');
+            $table->integer('minimum_transactions');
+            $table->date('periode');
             $table->timestamps();
         });
     }
@@ -28,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('bahans');
+        Schema::dropIfExists('analisis_aprioris');
     }
 };

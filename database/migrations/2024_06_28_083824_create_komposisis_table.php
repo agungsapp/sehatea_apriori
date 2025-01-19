@@ -18,6 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger('produk_id');
             $table->unsignedBigInteger('bahan_id');
             $table->integer('takaran');
+            // $table->float('hpp');
             $table->timestamps();
 
             $table->foreign('produk_id')

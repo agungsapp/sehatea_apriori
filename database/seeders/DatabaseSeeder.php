@@ -20,13 +20,14 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         // pondasi
-        $this->call(ProdukSeeder::class);
+        // $this->call(ProdukSeeder::class);
         $this->call(StarterSeeder::class);
-        $this->call(BahanSeeder::class);
+        // $this->call(BahanSeeder::class);
         $this->call(UserSeeder::class);
         $this->call(SettingsSeeder::class);
         $this->call(SumberDanaSeeder::class);
         $this->call(JenisPengeluaranSeeder::class);
         $this->call(SatuanSeeder::class);
+        $this->call(DataSeederCSV::class);
     }
 }

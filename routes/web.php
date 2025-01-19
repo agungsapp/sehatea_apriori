@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DebugController;
+use App\Livewire\Analisis\AnalisisPage;
 use App\Livewire\Antrian\AntrianPage;
 use App\Livewire\Antrian\CreateAntrian;
 use App\Livewire\Antrian\EditAntrian;
@@ -84,6 +85,8 @@ Route::middleware('auth')->group(function () {
     Route::get('pengeluaran-lain', PengeluaranLainPage::class)->name('pengeluaran-lain');
 
     Route::get('komposisi', KomposisiPage::class)->name('komposisi');
+
+    Route::get('analisis', AnalisisPage::class)->name('analisis');
 
     Route::get('mode-kasir', PenjualanPage::class)->name('mode-kasir');
     Route::get('mode-kasir-show/{id}', PenjualanShow::class)->name('mode-kasir-show');

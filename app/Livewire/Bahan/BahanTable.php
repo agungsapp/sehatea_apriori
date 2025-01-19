@@ -4,6 +4,7 @@ namespace App\Livewire\Bahan;
 
 use App\Models\Bahan;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
@@ -45,6 +46,7 @@ final class BahanTable extends PowerGridComponent
             ->add('id')
             ->add('nama')
             ->add('satuan')
+            ->add('harga_satuan', fn($data) => Str::rupiah($data->harga_satuan))
             ->add('stok')
             ->add('catatan')
             ->add('active')
@@ -60,6 +62,9 @@ final class BahanTable extends PowerGridComponent
                 ->searchable(),
 
             Column::make('Satuan', 'satuan')
+                ->sortable()
+                ->searchable(),
+            Column::make('Harga Satuan', 'harga_satuan')
                 ->sortable()
                 ->searchable(),
 

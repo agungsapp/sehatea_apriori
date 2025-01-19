@@ -12,6 +12,21 @@ class Produk extends Model
     // protected $guarded = ['id'];
     protected $fillable = ['nama', 'hpp', 'harga'];
 
+
+    public function getHppAttribute()
+    {
+        return $this->calculateHpp();
+    }
+
+    // Method helper untuk menghitung HPP
+    public function calculateHpp()
+    {
+        return $this->komposisi->sum(function ($komposisi) {
+            return $komposisi->takaran * $komposisi->bahan->getLatestHargaSatuan();
+        });
+    }
+
+    // Definisi relasi dengan komposisi
     public function komposisi()
     {
         return $this->hasMany(Komposisi::class, 'produk_id');

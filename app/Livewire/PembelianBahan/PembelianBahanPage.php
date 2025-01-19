@@ -232,27 +232,27 @@ class PembelianBahanPage extends Component
         try {
             $bahan = Bahan::findOrFail($bahanId);
 
+            // Jika satuan sama, langsung tambah dan update harga
             if ($bahan->satuan == $satuan) {
                 $bahan->stok += $qty;
+                $bahan->harga_satuan = $this->hargaSatuan; // Update harga langsung jika satuan sama
                 $bahan->save();
                 return true;
             }
 
-            // Cek konversi satuan
-            $konversi = KonversiSatuan::where('bahan_id', $bahanId)
-                ->where('satuan_awal', $satuan)
-                ->where('satuan_tujuan', $bahan->satuan)
-                ->first();
+            // Cari jalur konversi
+            $hasil = $this->hitungKonversi($bahanId, $satuan, $bahan->satuan, $qty);
 
-            // Jika konversi tidak ditemukan, tampilkan error dan return false
-            if (!$konversi) {
-                $this->showError("Data konversi satuan untuk bahan {$bahan->nama} dari {$satuan} ke {$bahan->satuan} tidak ditemukan!");
+            if ($hasil === false) {
+                $this->showError("Tidak ditemukan jalur konversi dari {$satuan} ke {$bahan->satuan} untuk bahan {$bahan->nama}");
                 return false;
             }
 
-            // Jika konversi ditemukan, lakukan perhitungan
-            $hasil = $qty * $konversi->rasio;
+            // Hitung harga satuan yang baru setelah konversi
+            $hargaSatuanBaru = $this->hargaSatuan / ($hasil / $qty);
+
             $bahan->stok += $hasil;
+            $bahan->harga_satuan = $hargaSatuanBaru; // Update harga satuan setelah konversi
             $bahan->save();
 
             return true;
@@ -263,34 +263,37 @@ class PembelianBahanPage extends Component
         }
     }
 
+
     protected function kurangiStok($bahanId, $qty, $satuan)
     {
         try {
             $bahan = Bahan::findOrFail($bahanId);
-            $qtyDalamSatuanBahan = $qty;
 
-            if ($bahan->satuan != $satuan) {
-                $konversi = KonversiSatuan::where('bahan_id', $bahanId)
-                    ->where('satuan_awal', $satuan)
-                    ->where('satuan_tujuan', $bahan->satuan)
-                    ->first();
-
-                // Jika konversi tidak ditemukan
-                if (!$konversi) {
-                    $this->showError("Data konversi satuan untuk bahan {$bahan->nama} dari {$satuan} ke {$bahan->satuan} tidak ditemukan!");
+            // Jika satuan sama, langsung kurangi
+            if ($bahan->satuan == $satuan) {
+                if ($bahan->stok < $qty) {
+                    $this->showError("Stok {$bahan->nama} tidak mencukupi. Stok tersedia: {$bahan->stok} {$bahan->satuan}");
                     return false;
                 }
-
-                $qtyDalamSatuanBahan = $qty * $konversi->rasio;
+                $bahan->stok -= $qty;
+                $bahan->save();
+                return true;
             }
 
-            // Cek apakah stok mencukupi
-            if ($bahan->stok < $qtyDalamSatuanBahan) {
-                $this->showError("Stok {$bahan->nama} tidak mencukupi untuk operasi ini. Stok tersedia: {$bahan->stok} {$bahan->satuan}");
+            // Hitung konversi
+            $hasil = $this->hitungKonversi($bahanId, $satuan, $bahan->satuan, $qty);
+
+            if ($hasil === false) {
+                $this->showError("Tidak ditemukan jalur konversi dari {$satuan} ke {$bahan->satuan} untuk bahan {$bahan->nama}");
                 return false;
             }
 
-            $bahan->stok -= $qtyDalamSatuanBahan;
+            if ($bahan->stok < $hasil) {
+                $this->showError("Stok {$bahan->nama} tidak mencukupi. Stok tersedia: {$bahan->stok} {$bahan->satuan}");
+                return false;
+            }
+
+            $bahan->stok -= $hasil;
             $bahan->save();
             return true;
         } catch (\Exception $e) {
@@ -298,6 +301,53 @@ class PembelianBahanPage extends Component
             $this->showError('Error saat kurangi stok: ' . $e->getMessage());
             return false;
         }
+    }
+
+    protected function hitungKonversi($bahanId, $satuanAwal, $satuanTujuan, $qty, $visited = [])
+    {
+        // Base case: jika satuan awal dan tujuan sama
+        if ($satuanAwal === $satuanTujuan) {
+            return $qty;
+        }
+
+        // Cek konversi langsung
+        $konversiLangsung = KonversiSatuan::where('bahan_id', $bahanId)
+            ->where('satuan_awal', $satuanAwal)
+            ->where('satuan_tujuan', $satuanTujuan)
+            ->first();
+
+        if ($konversiLangsung) {
+            return $qty * $konversiLangsung->rasio;
+        }
+
+        // Cari semua konversi yang berawal dari satuan awal
+        $konversiTersedia = KonversiSatuan::where('bahan_id', $bahanId)
+            ->where('satuan_awal', $satuanAwal)
+            ->whereNotIn('satuan_tujuan', $visited)
+            ->get();
+
+        foreach ($konversiTersedia as $konversi) {
+            // Tandai satuan ini sebagai sudah dikunjungi untuk menghindari infinite loop
+            $newVisited = array_merge($visited, [$konversi->satuan_tujuan]);
+
+            // Hitung konversi ke satuan menengah
+            $nilaiMenengah = $qty * $konversi->rasio;
+
+            // Cari konversi dari satuan menengah ke satuan tujuan
+            $hasil = $this->hitungKonversi(
+                $bahanId,
+                $konversi->satuan_tujuan,
+                $satuanTujuan,
+                $nilaiMenengah,
+                $newVisited
+            );
+
+            if ($hasil !== false) {
+                return $hasil;
+            }
+        }
+
+        return false;
     }
 
     public function batalEdit()

@@ -34,7 +34,8 @@
                   wire:model.live="selectedBahan">
                   <option selected>-- pilih bahan --</option>
                   @foreach ($bahans as $bahan)
-                    <option value="{{ $bahan->id }}">{{ $bahan->nama }}</option>
+                    <option value="{{ $bahan->id }}">
+                      {{ $bahan->nama . ' [ ' . $bahan->stok . ' /' . $bahan->satuan . ' ] ' }}</option>
                   @endforeach
                 </select>
                 @error('selectedBahan')
@@ -101,10 +102,17 @@
         <div class="card-header">
           <div class="card-title d-flex justify-content-between align-items-center">
             <span>Komposisi Produk</span>
-            <button type="button" class="btn btn-primary" wire:click="save"
-              @if (empty($komposisi)) disabled @endif>
-              Simpan Komposisi
-            </button>
+            @if ($isEdit)
+              <button type="button" class="btn btn-primary" wire:click="update"
+                @if (empty($komposisi)) disabled @endif>
+                Update Komposisi
+              </button>
+            @else
+              <button type="button" class="btn btn-primary" wire:click="save"
+                @if (empty($komposisi)) disabled @endif>
+                Simpan Komposisi
+              </button>
+            @endif
           </div>
         </div>
         <div class="card-body">
@@ -163,5 +171,35 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div class="row p-5">
+    @forelse ($produks as $produk)
+      <div class="col-4 mb-5">
+        <div class="card h-100 w-100">
+          <div class="card-body">
+            <h5 class="card-title">{{ $produk->nama }}</h5>
+            <h6 class="card-subtitle text-muted mb-2">{{ Str::rupiah($produk->hpp) }}</h6>
+            {{-- list bahan --}}
+            <ul class="list-group list-group-flush">
+              @forelse ($produk->komposisi as $k)
+                <li class="list-group-item d-flex justify-content-between">
+                  <span class="fw-bold">{{ $k->bahan->nama }}</span>
+                  <span>{{ Str::rupiah($k->takaran * $k->bahan->harga_satuan) }}</span>
+                </li>
+              @empty
+                <li class="list-group-item">masih kosong !</li>
+              @endforelse
+            </ul>
+
+          </div>
+          <div class="card-footer">
+            HPP : {{ Str::rupiah($produk->hpp) }}
+          </div>
+        </div>
+      </div>
+    @empty
+    @endforelse
+
   </div>
 </div>

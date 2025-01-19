@@ -1,8 +1,8 @@
-migrasi ke sehatea sampai di tahap pembelian bahan sudah done CRUD. 
-- master data jenis pengeluaran 
-- master data sumber dana
-- penjualan beresin
-- pennjualan detail juga
+step by step
 
--bersih besih 
-- susun implementasi algoritma
+1. composer install
+2. npm install
+4. npm run dev
+5. php artisan migrate --seed
+6. php artisan key:generate
+5. php artisan serve
