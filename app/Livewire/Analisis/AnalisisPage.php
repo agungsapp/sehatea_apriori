@@ -28,8 +28,8 @@ class AnalisisPage extends Component
     {
         $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
         $this->endDate = Carbon::now()->format('Y-m-d');
-        $this->minSupport = 0.02;    // Turunkan ke 1%
-        $this->minConfidence = 0.2;  // Turunkan ke 10%
+        $this->minSupport = 0.02;
+        $this->minConfidence = 0.2;
     }
 
     public function analyze()

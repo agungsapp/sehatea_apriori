@@ -5,13 +5,13 @@
 
       <div class="d-flex align-items-center">
         <!-- Search form -->
-        <form>
+        {{-- <form>
           <select class="form-select" style="width: 250px;" wire:model.live="selectedCabang"
             aria-label="Default select example">
             <option value="">-- Cabang Aktif --</option>
 
           </select>
-        </form>
+        </form> --}}
         <!-- / select cabang form -->
       </div>
       <!-- Navbar links -->
