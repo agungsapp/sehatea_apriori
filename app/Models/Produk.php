@@ -13,10 +13,14 @@ class Produk extends Model
     protected $fillable = ['nama', 'hpp', 'harga'];
 
 
-    public function getHppAttribute()
-    {
-        return $this->calculateHpp();
-    }
+
+
+
+
+    // public function getHppAttribute()
+    // {
+    //     return $this->calculateHpp();
+    // }
 
     // Method helper untuk menghitung HPP
     public function calculateHpp()

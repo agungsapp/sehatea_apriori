@@ -52,9 +52,24 @@
                 @enderror
               </div>
 
-              <div class="col-6 mb-3">
+              {{-- <div class="col-6 mb-3">
                 <label for="satuan" class="form-label text-capitalize">satuan</label>
                 <input type="text" class="form-control" id="satuan" wire:model="satuan" readonly>
+              </div> --}}
+
+              <div class="col-6 mb-3">
+                <label for="satuan" class="form-label text-capitalize wajib">satuan</label>
+                <select id="satuan" class="form-control choice @error('satuan') is-invalid @enderror form-select"
+                  wire:model.live="satuan">
+                  <option selected>-- pilih bahan --</option>
+                  @foreach ($satuans as $sat)
+                    <option value="{{ $sat }}">
+                      {{ $sat }}</option>
+                  @endforeach
+                </select>
+                @error('satuan')
+                  <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
               </div>
 
               <!-- Manual Input Section -->
@@ -76,7 +91,7 @@
                   @enderror
                 </div>
 
-                <div class="col-6 mb-3">
+                {{-- <div class="col-6 mb-3">
                   <label for="satuanAwalManual" class="form-label text-capitalize wajib">
                     Satuan Awal
                   </label>
@@ -85,7 +100,27 @@
                   @error('satuanAwalManual')
                     <div class="invalid-feedback">{{ $message }}</div>
                   @enderror
+                </div> --}}
+
+
+                {{-- satuan awal select --}}
+                <div class="col-6 mb-3">
+                  <label for="satuan" class="form-label text-capitalize wajib">Satuan Awal</label>
+                  <select id="satuan"
+                    class="form-control choice @error('satuanAwalManual') is-invalid @enderror form-select"
+                    wire:model="satuanAwalManual">
+                    <option selected>-- pilih satuan --</option>
+                    @foreach ($satuans as $satu)
+                      <option value="{{ $satu }}">
+                        {{ $satu }}</option>
+                    @endforeach
+                  </select>
+                  @error('satuanAwalManual')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                  @enderror
                 </div>
+
+
               @endif
 
             </div>
@@ -124,6 +159,7 @@
                   <th scope="col">Nama Bahan</th>
                   <th scope="col">Takaran</th>
                   <th scope="col">HPP</th>
+                  <th scope="col">Harga per Takar</th>
                   <th scope="col">Input Manual</th>
                   <th scope="col">Aksi</th>
                 </tr>
@@ -135,6 +171,7 @@
                     <td>{{ $item['nama_bahan'] }}</td>
                     <td>{{ $item['takaran'] }} {{ $item['satuan'] }}</td>
                     <td>{{ number_format($item['hpp'], 0, ',', '.') }}</td>
+                    <td>{{ number_format($item['harga_takaran'], 0, ',', '.') }}</td>
                     <td>
                       @if ($item['is_manual'])
                         <span class="badge bg-info">Manual</span>
@@ -173,33 +210,10 @@
     </div>
   </div>
 
-  <div class="row p-5">
-    @forelse ($produks as $produk)
-      <div class="col-4 mb-5">
-        <div class="card h-100 w-100">
-          <div class="card-body">
-            <h5 class="card-title">{{ $produk->nama }}</h5>
-            <h6 class="card-subtitle text-muted mb-2">{{ Str::rupiah($produk->hpp) }}</h6>
-            {{-- list bahan --}}
-            <ul class="list-group list-group-flush">
-              @forelse ($produk->komposisi as $k)
-                <li class="list-group-item d-flex justify-content-between">
-                  <span class="fw-bold">{{ $k->bahan->nama }}</span>
-                  <span>{{ Str::rupiah($k->takaran * $k->bahan->harga_satuan) }}</span>
-                </li>
-              @empty
-                <li class="list-group-item">masih kosong !</li>
-              @endforelse
-            </ul>
 
-          </div>
-          <div class="card-footer">
-            HPP : {{ Str::rupiah($produk->hpp) }}
-          </div>
-        </div>
-      </div>
-    @empty
-    @endforelse
+  @livewire('komposisi.komposisi-card')
 
-  </div>
+
+
+
 </div>

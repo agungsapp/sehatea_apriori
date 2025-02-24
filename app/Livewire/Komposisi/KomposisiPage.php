@@ -8,6 +8,7 @@ use App\Models\Komposisi;
 use App\Models\KonversiSatuan;
 use App\Models\Pengeluaran;
 use App\Models\Produk;
+use App\Models\Satuan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
@@ -22,6 +23,7 @@ class KomposisiPage extends Component
     public $selectedProduk;
     public $selectedBahan;
     public $takaran;
+    public $hargaTakaran;
     public $satuan;
 
     // input manual properties
@@ -37,6 +39,7 @@ class KomposisiPage extends Component
     // master data
     public $produks;
     public $bahans;
+    public $satuans;
 
     protected $rules = [
         'selectedProduk' => 'required',
@@ -53,42 +56,168 @@ class KomposisiPage extends Component
 
     public function mount()
     {
-        $this->produks = Produk::with('komposisi')->orderBy('nama', 'asc')->get();
+        $this->produks = Produk::select('id', 'nama', 'hpp')->with('komposisi')->orderBy('nama', 'asc')->get();
         $this->bahans = Bahan::orderBy('nama', 'asc')->get();
+        $this->satuans = Satuan::select('nama')->get()->pluck('nama')->toArray();
+        // dd($this->satuans);
     }
 
     public function updatedSelectedBahan($value)
     {
         if ($value) {
             $bahan = Bahan::find($value);
-            $this->satuan = $bahan->satuan;
 
-            // Cek apakah ada data pembelian
-            $lastPurchase = Pengeluaran::where('bahan_id', $value)
-                ->orderBy('tanggal', 'desc')
-                ->first();
+            // Set satuan default tapi tetap bisa diubah
+            if (!$this->satuan) {
+                $this->satuan = $bahan->satuan;
+            }
 
-            if (!$lastPurchase) {
+            // Cari harga satuan
+            $hargaSatuan = $this->fetchAndUpdateHargaSatuan($value);
+
+            if ($hargaSatuan === null) {
+                // Jika tidak ditemukan harga satuan, aktifkan mode manual input
                 $this->manualInput = true;
                 $this->alert('info', 'Data pembelian tidak ditemukan. Silahkan input harga satuan manual.');
             } else {
+                // Jika ditemukan harga satuan, gunakan mode otomatis
                 $this->manualInput = false;
                 $this->hargaSatuanManual = null;
                 $this->satuanAwalManual = null;
+
+                // Set satuan awal sesuai dengan satuan bahan
+                $this->satuanAwalManual = $bahan->satuan;
             }
         }
+    }
+
+
+
+    protected function fetchAndUpdateHargaSatuan($bahanId)
+    {
+        $bahan = Bahan::find($bahanId);
+        if (!$bahan) {
+            $this->alert('error', "Bahan dengan ID {$bahanId} tidak ditemukan.");
+            return null;
+        }
+
+        // Cek apakah harga satuan sudah ada di tabel bahans
+        if ($bahan->harga_satuan) {
+            return $bahan->harga_satuan;
+        }
+
+        // Cari harga satuan terakhir dari pengeluarans
+        $lastPurchase = Pengeluaran::where('bahan_id', $bahanId)
+            ->orderBy('tanggal', 'desc')
+            ->first();
+
+        if ($lastPurchase) {
+            // Update harga satuan di tabel bahans
+            $bahan->harga_satuan = $lastPurchase->harga_satuan;
+            $bahan->save();
+            return $lastPurchase->harga_satuan;
+        }
+
+        // Tidak ditemukan harga satuan
+        return null;
     }
 
     public function calculateHppBahan($bahanId, $takaran)
     {
         $bahan = Bahan::find($bahanId);
-
         if (!$bahan) {
             $this->alert('error', "Bahan tidak ditemukan");
             return 0;
         }
 
+        // Ambil semua data konversi untuk bahan ini
+        $konversiData = KonversiSatuan::where('bahan_id', $bahanId)->get()->keyBy(function ($item) {
+            return "{$item->satuan_awal}_{$item->satuan_tujuan}";
+        });
+
+        // Jika input manual, gunakan harga manual
+        if ($this->manualInput) {
+            if ($this->satuanAwalManual !== $this->satuan) {
+                $ratio = $this->findConversionRatio($konversiData, $this->satuanAwalManual, $this->satuan);
+                if ($ratio === null) {
+                    $this->alert('error', "Konversi satuan tidak ditemukan untuk {$this->satuanAwalManual} ke {$this->satuan}");
+                    return 0;
+                }
+                Log::info('Rasio Konversi:', [
+                    'satuan_awal' => $this->satuanAwalManual,
+                    'satuan_tujuan' => $this->satuan,
+                    'ratio' => $ratio,
+                ]);
+
+                // Hitung harga per satuan dasar
+                $hargaPerSatuanDasar = $this->hargaSatuanManual / $ratio;
+
+                // Set harga takaran
+                $this->hargaTakaran = $hargaPerSatuanDasar;
+
+                // Hitung harga untuk takaran tertentu
+                $hargaAkhir = $hargaPerSatuanDasar * $takaran;
+
+                Log::info('Harga Akhir:', [
+                    'harga_per_satuan_dasar' => $hargaPerSatuanDasar,
+                    'takaran' => $takaran,
+                    'harga_akhir' => $hargaAkhir,
+                ]);
+
+                return $hargaAkhir;
+            }
+            return $this->hargaSatuanManual * $takaran;
+        }
+
+        // Untuk input otomatis (dari data pembelian)
+        if ($bahan->satuan !== $this->satuan) {
+            $ratio = $this->findConversionRatio($konversiData, $bahan->satuan, $this->satuan);
+            if ($ratio === null) {
+                $this->alert('error', "Konversi satuan tidak ditemukan untuk {$bahan->satuan} ke {$this->satuan}");
+                return 0;
+            }
+
+            // Hitung harga per satuan dasar
+            $hargaPerSatuanDasar = $bahan->harga_satuan / $ratio;
+
+            // Set harga takaran
+            $this->hargaTakaran = $hargaPerSatuanDasar;
+
+            // Hitung harga untuk takaran tertentu
+            $hargaAkhir = $hargaPerSatuanDasar * $takaran;
+
+            return $hargaAkhir;
+        }
+
         return $bahan->harga_satuan * $takaran;
+    }
+    // Fungsi rekursif untuk mencari konversi berlapis
+    protected function findConversionRatio($konversiData, $satuanAwal, $satuanTujuan, $visited = [])
+    {
+        // Cek apakah sudah pernah dikunjungi untuk menghindari loop tak terbatas
+        if (in_array("{$satuanAwal}_{$satuanTujuan}", $visited)) {
+            return null;
+        }
+        $visited[] = "{$satuanAwal}_{$satuanTujuan}";
+
+        // Cek konversi langsung
+        $key = "{$satuanAwal}_{$satuanTujuan}";
+        if (isset($konversiData[$key])) {
+            return $konversiData[$key]->rasio;
+        }
+
+        // Cari konversi melalui satuan perantara
+        foreach ($konversiData as $konversi) {
+            if ($konversi->satuan_awal === $satuanAwal) {
+                $intermediateRatio = $this->findConversionRatio($konversiData, $konversi->satuan_tujuan, $satuanTujuan, $visited);
+                if ($intermediateRatio !== null) {
+                    return $konversi->rasio * $intermediateRatio;
+                }
+            }
+        }
+
+        // Tidak ditemukan konversi
+        return null;
     }
 
     public function addToKomposisi()
@@ -120,10 +249,13 @@ class KomposisiPage extends Component
             'takaran' => $this->takaran,
             'satuan' => $this->satuan,
             'hpp' => $hpp,
+            'harga_takaran' => $this->hargaTakaran ?? 0,
             'harga_satuan' => $this->manualInput ? $this->hargaSatuanManual : null,
             'satuan_awal' => $this->manualInput ? $this->satuanAwalManual : null,
             'is_manual' => $this->manualInput
         ];
+
+        Log::info($this->komposisi);
 
         $this->calculateTotalHpp();
         $this->resetForm();
@@ -136,6 +268,7 @@ class KomposisiPage extends Component
         $this->selectedBahan = null;
         $this->takaran = null;
         $this->satuan = null;
+        $this->reset('hargaTakaran');
     }
 
     public function removeFromKomposisi($index)
@@ -194,25 +327,38 @@ class KomposisiPage extends Component
         }
 
         try {
-            // Mulai transaksi
             DB::beginTransaction();
 
             foreach ($this->komposisi as $item) {
                 Komposisi::create([
                     'produk_id' => $this->selectedProduk,
                     'bahan_id' => $item['bahan_id'],
-                    'takaran' => $item['takaran'],
+                    'takaran' => $item['takaran']
                 ]);
+
+                // Simpan harga satuan manual ke tabel bahans jika mode manual input
+                if ($item['is_manual']) {
+                    $bahan = Bahan::find($item['bahan_id']);
+                    $bahan->harga_satuan = $item['harga_takaran'];
+                    $bahan->save();
+                }
             }
 
             // Update HPP produk
-            $produk = Produk::find($this->selectedProduk);
-            $produk->hpp = $this->totalHpp;
-            $produk->save();
+            try {
+                $produk = Produk::find($this->selectedProduk);
+                $produk->hpp += $this->totalHpp;
+                $produk->save();
+                Log::info("update hpp produk berhasil!");
+            } catch (\Throwable $th) {
+                Log::info("update hpp produk gagal!");
+                //throw $th;
+            }
 
             DB::commit();
 
             $this->alert('success', 'Komposisi berhasil disimpan');
+            $this->dispatch('update-card');
             $this->resetAll();
         } catch (\Exception $e) {
             DB::rollBack();
