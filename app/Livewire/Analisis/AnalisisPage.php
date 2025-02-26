@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Analisis;
 
+use App\Models\Transaksi;
 use App\Services\AprioriAnalyzer;
 use Carbon\Carbon;
 use Livewire\Component;
@@ -26,7 +27,18 @@ class AnalisisPage extends Component
 
     public function mount()
     {
-        $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
+
+
+        // Mendapatkan tanggal terawal dari tabel transaksi
+        $earliestDate = Transaksi::min('created_at');
+
+
+        // Menetapkan startDate ke tanggal terawal (atau awal bulan jika tidak ada data)
+        $this->startDate = $earliestDate
+            ? Carbon::parse($earliestDate)->format('Y-m-d')
+            : Carbon::now()->startOfMonth()->format('Y-m-d');
+
+
         $this->endDate = Carbon::now()->format('Y-m-d');
         $this->minSupport = 0.02;
         $this->minConfidence = 0.2;
